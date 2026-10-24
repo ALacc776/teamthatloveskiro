@@ -1,4 +1,4 @@
-import { agentRespond, ruleRespond, rephrase } from "@/lib/agent.js";
+import { agentRespond, ruleRespond } from "@/lib/agent.js";
 import { search } from "@/lib/engine.js";
 import { beginConfirmation, advanceConfirmation, toInquiry } from "@/lib/confirmation.js";
 
@@ -8,20 +8,6 @@ function deadlineISO(when) {
   if (when === "tomorrow") d.setDate(d.getDate() + 1);
   d.setHours(21, 0, 0, 0);
   return d.toISOString();
-}
-
-// Ask Kiro to phrase a confirmation line warmly, but ONLY accept its wording if
-// it still contains every must-keep fact verbatim. Otherwise keep the original.
-// This gives a conversational feel without ever letting the LLM alter a drug,
-// strength, or form — the safety gate's guarantees are preserved.
-async function warm(originalReply, intent, facts) {
-  const must = Object.values(facts || {})
-    .flatMap((v) => (Array.isArray(v) ? v : [v]))
-    .filter((v) => typeof v === "string" && v.length);
-  const phrased = await rephrase(intent, facts);
-  if (!phrased) return originalReply;
-  const ok = must.every((f) => phrased.toLowerCase().includes(String(f).toLowerCase()));
-  return ok ? phrased : originalReply;
 }
 
 function runSearch({ confirmedName, when, rush, zip, planId, leadIn, inquiry }) {
@@ -64,16 +50,13 @@ export async function POST(req) {
         pending: null, results, reply
       });
     }
-    // still collecting — rephrase the question warmly, keep facts exact
-    const p = step.pending || {};
-    const warmReply = await warm(step.reply, "Ask the patient the next confirmation question.", {
-      medication: p.entry?.name,
-      strength: p.strength,
-      options: p.suggestions?.map((s) => s.name)
-    });
+    // Still collecting. Use the gate's EXACT wording — never rephrase a
+    // confirmation question, because the rephraser can turn "what strength?"
+    // into a yes/no "do you need amoxicillin?", which desyncs from the pending
+    // stage and loops forever. The gate's text always states the real ask.
     return Response.json({
       parsed: { intent: "confirm", source: "confirmation" },
-      pending: step.pending, results: null, reply: warmReply
+      pending: step.pending, results: null, reply: step.reply
     });
   }
 
@@ -89,13 +72,11 @@ export async function POST(req) {
   const conf = beginConfirmation(a.drug);
   const pendingOut = conf.pending ? { ...conf.pending, when: a.when, rush: a.rush } : null;
 
-  // Warmly phrase the confirmation ask; the agent's own lead-in already leads.
-  const confFacts = {
-    medication: conf.pending?.entry?.name,
-    options: conf.pending?.suggestions?.map((s) => s.name)
-  };
-  const warmConf = await warm(conf.reply, "Confirm the medication with the patient before searching.", confFacts);
-  const reply = conf.pending ? `${a.reply}\n\n${warmConf}` : conf.reply;
+  // Keep the agent's warm lead-in, but ask the confirmation question with the
+  // gate's EXACT wording (which names the real ask: the strength, or the list
+  // to pick from). Rephrasing it risks a meaning-changing yes/no that strands
+  // the state machine.
+  const reply = conf.pending ? `${a.reply}\n\n${conf.reply}` : conf.reply;
 
   return Response.json({
     parsed: { ...a, intent: "confirm" }, pending: pendingOut, results: null, reply

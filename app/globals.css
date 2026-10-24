@@ -134,6 +134,69 @@ html, body {
 @keyframes pulse { 0%,100% { opacity: .3 } 50% { opacity: 1 } }
 @media (prefers-reduced-motion: reduce) { .stock .dot { animation: none } }
 
+/* order-placing progress + confirmation */
+.order-status {
+  font-size: 14px; border-radius: 11px; padding: 10px 12px; margin-bottom: 10px;
+  background: var(--grouped-bg); color: var(--ink);
+}
+.order-status.done {
+  background: color-mix(in srgb, var(--green-status) 16%, var(--card));
+}
+.order-status .order-row { display: flex; align-items: center; gap: 7px; font-weight: 500; }
+.order-status .order-row.done { color: var(--green-status); font-weight: 600; align-items: flex-start; }
+.order-status .order-note { font-size: 12px; color: var(--secondary); margin-top: 5px; }
+.order-status .dot {
+  display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  background: var(--blue); animation: pulse 1s infinite;
+}
+.order-status .bar {
+  margin-top: 9px; height: 6px; border-radius: 999px; overflow: hidden;
+  background: color-mix(in srgb, var(--blue) 18%, transparent);
+}
+.order-status .bar span {
+  display: block; height: 100%; border-radius: 999px; background: var(--blue);
+  transition: width .7s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .order-status .dot { animation: none }
+  .order-status .bar span { transition: none }
+}
+.pharm .acts .order:disabled { opacity: .7; cursor: default; }
+
+/* ---------- Refill check-in reminder ---------- */
+.reminder {
+  align-self: flex-start; max-width: 86%; margin-top: 7px;
+  background: color-mix(in srgb, var(--blue) 12%, var(--card));
+  border: 0.5px solid color-mix(in srgb, var(--blue) 35%, var(--separator));
+  border-radius: 16px; border-bottom-left-radius: 5px; padding: 12px 14px;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+}
+.reminder .reminder-name { font-weight: 600; font-size: 15px; }
+.reminder .reminder-acts { display: flex; gap: 8px; }
+.reminder button {
+  border: none; border-radius: 11px; padding: 8px 14px; font-size: 14px; font-weight: 600;
+  cursor: pointer; font-family: inherit;
+}
+.reminder .reorder { background: var(--blue); color: var(--blue-ink); }
+.reminder .later { background: var(--grouped-bg); color: var(--blue); }
+
+/* "Text me these options" action under a result group */
+.textme {
+  align-self: flex-start; margin-top: 7px;
+  background: var(--grouped-bg); color: var(--blue);
+  border: none; border-radius: 999px; padding: 9px 16px;
+  font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit;
+}
+.textme:disabled { opacity: .6; cursor: default; }
+
+/* demo-only fast-forward control */
+.chips.demo { padding-top: 0; }
+.chips .demo-btn {
+  background: var(--grouped-bg); color: var(--secondary);
+  border: 0.5px dashed var(--separator); border-radius: 999px;
+  padding: 8px 14px; font-size: 13px; cursor: pointer;
+}
+
 /* ---------- Safety note ---------- */
 .safety {
   align-self: center; text-align: center; font-size: 12.5px; color: var(--secondary);

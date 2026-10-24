@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start",
     "test": "node --test",
-    "build:catalog": "node scripts/build-catalog.mjs"
+    "build:catalog": "node scripts/build-catalog.mjs",
+    "build:pharmacies": "node scripts/build-pharmacies.mjs data/research/RxReach_Greater_Boston_Pharmacies_FIXED.csv data/research/RxReach_Delivery_Programs_EXPANDED.csv data/pharmacies.generated.js"
   },
   "dependencies": {
     "next": "^16.4.3",
