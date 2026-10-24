@@ -11,6 +11,7 @@ const FLAG_TEXT = {
 
 function PharmBubble({ r, profile, when, rush }) {
   const [sms, setSms] = useState(null);
+  const [stock, setStock] = useState(null); // {status, inStock, summary, ...}
   const ins =
     r.insurance === "likely_in" ? ["in", "Likely in network"]
     : r.insurance === "likely_out" ? ["out", "May be out of network"]
@@ -30,6 +31,29 @@ function PharmBubble({ r, profile, when, rush }) {
     setSms(await res.json());
   }
 
+  async function checkStock() {
+    setStock({ status: "calling" });
+    const res = await fetch("/api/stock", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pharmacyName: r.name, phone: r.phone, medication: r.drugName })
+    });
+    const { callId } = await res.json();
+    if (!callId) { setStock({ status: "error" }); return; }
+    // poll for the result
+    const started = Date.now();
+    const timer = setInterval(async () => {
+      const p = await fetch(`/api/stock/result?callId=${callId}`);
+      const data = await p.json();
+      if (data.status === "done" || data.status === "error" || Date.now() - started > 90000) {
+        clearInterval(timer);
+        setStock(data);
+      } else {
+        setStock({ status: "calling" });
+      }
+    }, 1500);
+  }
+
   return (
     <div className={`pharm ${r.mode === "rush" ? "rush" : ""}`}>
       <p className="pname">{r.name}</p>
@@ -42,9 +66,22 @@ function PharmBubble({ r, profile, when, rush }) {
         {r.deadlineStatus === "tight" && <span className="tag">Tight</span>}
       </div>
       <p className="conf">Order by {r.cutoff} · {r.confidence} confidence · verified {r.lastVerified}</p>
+
+      {stock && (
+        <div className={`stock ${stock.status === "done" ? (stock.inStock ? "in" : "out") : stock.status}`}>
+          {stock.status === "calling" && <><span className="dot" /> Calling {r.name} to check stock…</>}
+          {stock.status === "done" && stock.inStock && <>✅ In stock{stock.readyTime ? ` — ready in ${stock.readyTime}` : ""}.</>}
+          {stock.status === "done" && stock.inStock === false && <>❌ Not in stock. I'll text you other options.</>}
+          {stock.status === "done" && stock.inStock == null && <>☎️ {stock.summary || "Couldn't confirm — try calling."}</>}
+          {stock.status === "error" && <>Couldn't place the call.</>}
+        </div>
+      )}
+
       <div className="acts">
         <a className="order" href={r.orderUrl} target="_blank" rel="noreferrer">Start order</a>
-        <a className="call" href={`tel:${r.phone}`}>Call</a>
+        <button className="call" type="button" onClick={checkStock} disabled={stock?.status === "calling"}>
+          {stock?.status === "calling" ? "Calling…" : "Check stock"}
+        </button>
       </div>
     </div>
   );

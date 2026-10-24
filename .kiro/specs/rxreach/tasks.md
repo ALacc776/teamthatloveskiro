@@ -15,7 +15,7 @@
 - [x] 12. SMS "text me these results" (Twilio; demo mode without keys)
 - [x] 13. Apple/iOS visual redesign per steering + frontend-design power
 - [ ] 14. Non-Rx graceful redirect (tissues/OTC) — designed, pending build
-- [ ] 15. Voice-agent stock check wired into the app (Vapi call + webhook)
+- [x] 15. Voice-agent stock check wired into the app (Vapi call + webhook)
 - [ ] 16. 2-minute demo video + submission writeup
 
 ## Phase 2 (post-hackathon)
