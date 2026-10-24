@@ -10,16 +10,7 @@ const FLAG_TEXT = {
 };
 
 // ---- In-chat onboarding steps ----
-const STEPS = ["zip", "phone", "insurance", "address", "done"];
-
-// Normalize a US mobile number to E.164 (+1XXXXXXXXXX). Returns null if it isn't
-// a plausible 10-digit number (or 11 digits starting with 1).
-function normalizePhone(text) {
-  const digits = (text || "").replace(/\D/g, "");
-  if (digits.length === 10) return "+1" + digits;
-  if (digits.length === 11 && digits[0] === "1") return "+" + digits;
-  return null;
-}
+const STEPS = ["zip", "insurance", "address", "done"];
 
 // ---- Saved medications + refill reminders (client-side demo store) ----
 // A real product keeps this server-side and sends the reminder by SMS/push even
@@ -85,7 +76,7 @@ function matchPlan(text) {
   return null;
 }
 
-function PharmBubble({ r, profile, onOrdered }) {
+function PharmBubble({ r, onOrdered }) {
   const [stock, setStock] = useState(null);
   const ins =
     r.insurance === "likely_in" ? ["in", "In network"]
@@ -232,7 +223,7 @@ export default function Home() {
       });
       const r = await res.json();
       const cards = (r.candidates || [])
-        .slice(0, 4)
+        .slice(0, 3)
         .map((c) => ({ ...c, drugName: med.name, strength: med.strength, form: med.form }));
       setMessages((m) => [...m, {
         from: "agent",
@@ -241,30 +232,6 @@ export default function Home() {
       }]);
     } catch {
       setMessages((m) => [...m, { from: "agent", text: "Couldn't pull up your reorder. Please try again." }]);
-    }
-    setBusy(false);
-  }
-
-  // Text the current options to the user's phone. Sends a real SMS when Twilio
-  // is configured; otherwise the API returns demo text and we show it in-app.
-  async function textMe(drug) {
-    if (!profile?.phone) {
-      addAgent("I don't have your mobile number yet. Tell me your number (like 617-555-0123) and I'll text your options.");
-      return;
-    }
-    setBusy(true);
-    try {
-      const res = await fetch("/api/text", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: profile.phone, zip: profile.zip, medication: drug, planId: profile.planId })
-      });
-      const data = await res.json();
-      if (data.sent) addAgent(`📲 Sent to ${profile.phone}. Check your Messages.`);
-      else if (data.demo) addAgent(`📲 Demo mode (no SMS keys set) — this is the text I'd send to ${profile.phone}:\n\n${data.message}`);
-      else addAgent(data.error ? `Couldn't send the text: ${data.error}` : "Couldn't send the text just now.");
-    } catch {
-      addAgent("Couldn't reach the texting service. Please try again.");
     }
     setBusy(false);
   }
@@ -299,22 +266,8 @@ export default function Home() {
       const zip = (text.match(/\d{5}/) || [])[0];
       if (!zip) { addAgent("I just need a 5-digit ZIP code — for example, 01301."); return; }
       setDraft((d) => ({ ...d, zip }));
-      setStep("phone");
-      addAgent(`Got it, ${zip}. What's your mobile number? I'll text your pharmacy options and refill check-ins there. (US number, like 617-555-0123 — or say "skip".)`);
-      return;
-    }
-    if (step === "phone") {
-      if (/\b(skip|no|none)\b/i.test(text.trim())) {
-        setDraft((d) => ({ ...d, phone: "" }));
-        setStep("insurance");
-        addAgent("No problem — I'll show options in the app instead. What insurance do you have? (MassHealth, Medicare Part D, Blue Cross, Tufts, Harvard Pilgrim — or say \"none\".)");
-        return;
-      }
-      const phone = normalizePhone(text);
-      if (!phone) { addAgent("That doesn't look like a 10-digit US mobile number. Try again like 617-555-0123, or say \"skip\"."); return; }
-      setDraft((d) => ({ ...d, phone }));
       setStep("insurance");
-      addAgent(`Thanks — I'll text ${phone}. What insurance do you have? (MassHealth, Medicare Part D, Blue Cross, Tufts, Harvard Pilgrim — or say "none".)`);
+      addAgent(`Got it, ${zip}. What insurance do you have? (MassHealth, Medicare Part D, Blue Cross, Tufts, Harvard Pilgrim — or say "none".)`);
       return;
     }
     if (step === "insurance") {
@@ -362,7 +315,7 @@ export default function Home() {
         const r = data.results;
         const inq = r.inquiry || {};
         msg.cards = [...r.rushResults, ...r.meetsDeadline, ...r.otherOptions]
-          .slice(0, 4).map((c) => ({ ...c, drugName: r.drug, strength: inq.strength || null, form: inq.form || null }));
+          .slice(0, 3).map((c) => ({ ...c, drugName: r.drug, strength: inq.strength || null, form: inq.form || null }));
         msg.flags = r.flags;
       }
       setMessages((m) => [...m, msg]);
@@ -376,7 +329,6 @@ export default function Home() {
 
   const placeholder =
     onboarding && step === "zip" ? "Enter your ZIP code…"
-    : onboarding && step === "phone" ? "Your mobile number…"
     : onboarding && step === "insurance" ? "Your insurance plan…"
     : onboarding && step === "address" ? "Your delivery address…"
     : "Message Oasis…";
@@ -406,14 +358,8 @@ export default function Home() {
               </div>
             ))}
             {m.cards?.map((c) => (
-              <PharmBubble key={c.pharmacyId} r={c} profile={profile} onOrdered={handleOrdered} />
+              <PharmBubble key={c.pharmacyId} r={c} onOrdered={handleOrdered} />
             ))}
-            {/* Text-me button hidden for now (SMS paused). Code kept for later. */}
-            {false && m.cards?.length > 0 && (
-              <button className="textme" type="button" disabled={busy} onClick={() => textMe(m.cards[0].drugName)}>
-                📲 Text me these options
-              </button>
-            )}
           </div>
         ))}
         {busy && (

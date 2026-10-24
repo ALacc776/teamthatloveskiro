@@ -1,87 +1,124 @@
 # Oasis
 
-Find a pharmacy that can **deliver your medication to your door** — built to help
-people in pharmacy deserts reach a delivering pharmacy without a car.
+Oasis helps people find pharmacies that deliver prescription medication.
 
-Tell Oasis your ZIP, your medication, and your insurance. It returns a ranked
-short list of nearby pharmacies with **documented** home delivery, how far each
-one is, and the delivery fee on record — then lets you place a demo order and
-sets a refill check-in so you don't run out.
+Users enter their ZIP code, insurance, medication, strength and dosage form.
+Oasis searches Greater Boston pharmacy records and returns the three best options.
+Each result includes distance, delivery cost, the pharmacy website and a stock-check action.
 
-> Hackathon MVP. Pharmacy records are **real research data** for Greater Boston
-> (names, addresses, phone numbers, sources and verification notes are preserved
-> verbatim). A listed pharmacy is **not** proof of stock or of your eligibility —
-> every record still needs a phone call to confirm. There are no invented
-> delivery-time estimates.
+Oasis works through its mobile web chat and an inbound SMS webhook. No account is
+required, and the search does not ask for a patient's name.
 
-## Run it
+## Run Oasis
 
 ```bash
 cd rxreach
 npm install
 npm run dev
-# open http://localhost:3000
 ```
 
-Open it on your phone (same Wi-Fi) at `http://<your-computer-ip>:3000` — it's a
-mobile-first website, so it looks and feels like an app with no install.
+Open [http://localhost:3000](http://localhost:3000) on the computer.
 
-## How it ranks pharmacies
-
-No delivery-time guessing. Oasis ranks the top 5 by, in order:
-
-1. **ZIP relevance** — your exact ZIP first, then the same ZIP area, then nearby.
-2. **Documented delivery** — pharmacies with delivery documented on a provider
-   page rank above stores only covered by a chain's general policy.
-3. **Distance** — closer ranks higher (approximate straight-line miles from ZIP
-   centroids; the research data carries no coordinates, so distance is shown as
-   "~N mi").
-4. **Source freshness** — more recently reviewed records break remaining ties.
-
-See `lib/engine.js`. The pharmacy dataset is generated from the research CSVs:
+To open Oasis on a phone, expose port 3000 through an HTTPS tunnel:
 
 ```bash
-npm run build:pharmacies   # data/research/*.csv -> data/pharmacies.generated.js
+ngrok http 3000
 ```
 
-## Data
+Open the HTTPS address printed by ngrok.
 
-- `data/research/RxReach_Greater_Boston_Pharmacies_FIXED.csv` — 146 pharmacies (primary).
-- `data/research/RxReach_Delivery_Programs_EXPANDED.csv` — 58 delivery-program
-  records, merged into the primary set by name + address (no duplicates created).
-- `data/pharmacies.generated.js` — the built dataset (do not hand-edit).
-- `data/catalog.generated.js` — the broad medication-name index (separate build).
+## Pharmacy search
 
-## Medication confirmation
+Oasis ranks pharmacies using four signals:
 
-Before searching, Oasis confirms the exact medication, strength and dosage form,
-and never substitutes one for another (`lib/confirmation.js`). A medication you've
-ordered before can be **reordered in one tap**, skipping those questions.
+1. **ZIP match** — pharmacies in the user's ZIP rank first.
+2. **Delivery support** — provider-backed delivery ranks above general chain policy.
+3. **Distance** — closer pharmacies rank higher.
+4. **Source date** — newer records break remaining ties.
 
-## Refill check-in
+Distance uses straight-line miles between ZIP-code centroids. Oasis does not
+invent delivery times. Pharmacy websites handle the order process.
 
-After an order, Oasis remembers it and schedules a check-in ~14 days later
-("time to reorder?"). This demo stores it in the browser and surfaces the reminder
-the next time you open Oasis. A production build would run this server-side and
-send it by SMS.
+The web chat and SMS flow each show three pharmacy options.
 
-## SMS (optional)
+## Pharmacy data
 
-The text route (`/api/text`) runs in **demo mode** (shows the message, sends
-nothing) until you set keys in `.env.local`. It supports two backends:
+The pharmacy directory contains 146 Greater Boston pharmacies.
 
-- **Textbelt** (`TEXTBELT_KEY`) — cheap, pay-as-you-go, no phone number to buy.
-- **Twilio** (`TWILIO_ACCOUNT_SID` + `TWILIO_AUTH_TOKEN` + `TWILIO_FROM`).
+- `data/research/RxReach_Greater_Boston_Pharmacies_FIXED.csv` is the primary directory.
+- `data/research/RxReach_Delivery_Programs_EXPANDED.csv` adds 58 delivery programs.
+- Delivery-program records merge by pharmacy name and address.
+- `data/pharmacies.generated.js` contains the generated application data.
+
+Rebuild the pharmacy data with:
 
 ```bash
-cp .env.example .env.local   # then fill in real values
+npm run build:pharmacies
 ```
 
-Oasis never assumes a pharmacy phone supports SMS — pharmacy numbers are only
-shown for you to **call**, and only verified participating pharmacies are listed
-in an outbound text.
+Names, addresses, phone numbers, sources and review notes remain attached to each
+record. Oasis directs users to confirm current stock and delivery eligibility with
+the pharmacy.
 
-## Not in the MVP (on purpose)
+## Medication catalog
 
-Real insurance network matching, live stock, pharmacy accounts, two-way SMS
-parsing. These are Phase 2.
+Oasis recognizes 1,565 medication names from `data/catalog.generated.js`.
+
+The catalog supports brand and generic names, partial matches and spelling
+suggestions. It validates every medication before pharmacy search begins.
+
+Oasis confirms:
+
+1. Medication name.
+2. Strength.
+3. Dosage form.
+
+The confirmation flow never substitutes another medication.
+
+## Inbound SMS
+
+Twilio sends incoming texts to:
+
+```text
+https://YOUR-PUBLIC-HOST/api/sms
+```
+
+Configure Twilio with **Custom** and **HTTP POST**.
+
+The SMS conversation follows this path:
+
+1. Ask for ZIP code.
+2. Ask for medication.
+3. Ask for strength and dosage form.
+4. Return three pharmacy options.
+
+The webhook returns TwiML for each custom response. Text `RESET` to restart or
+`HELP` for instructions.
+
+## Refill check-ins
+
+Oasis remembers a selected medication in the browser. After 14 days, it offers a
+one-tap reorder using the saved medication, strength and dosage form. The reorder
+flow skips repeated medication questions.
+
+## API routes
+
+| Route | Purpose |
+| --- | --- |
+| `/api/chat` | Web conversation and medication confirmation |
+| `/api/search` | Pharmacy ranking |
+| `/api/medication` | Medication lookup |
+| `/api/stock` | Pharmacy stock check |
+| `/api/stock/result` | Stock-check result |
+| `/api/sms` | Inbound SMS conversation |
+| `/api/text` | Outbound pharmacy options |
+
+## Validation
+
+```bash
+npm test
+npm run build
+```
+
+Tests cover medication matching, confirmation, pharmacy data, deduplication,
+ranking, distance, delivery rules and SMS conversations.
