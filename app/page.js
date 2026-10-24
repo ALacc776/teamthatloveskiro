@@ -118,13 +118,14 @@ export default function Home() {
     const text = (textArg ?? input).trim();
     if (!text || busy) return;
     setInput("");
+    const history = messages.slice(-6).map((m) => ({ from: m.from, text: m.text }));
     setMessages((m) => [...m, { from: "user", text }]);
     setBusy(true);
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, zip: profile.zip, planId: profile.planId })
+        body: JSON.stringify({ text, zip: profile.zip, planId: profile.planId, history })
       });
       const data = await res.json();
       const msg = { from: "agent", text: data.reply };

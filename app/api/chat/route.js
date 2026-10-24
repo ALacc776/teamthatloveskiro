@@ -1,5 +1,5 @@
-import { parseMessage } from "@/lib/parse.js";
-import { search } from "@/lib/engine.js";
+import { agentRespond, ruleRespond } from "@/lib/agent.js";
+import { search, findDrug } from "@/lib/engine.js";
 
 function deadlineISO(when) {
   if (when === "asap") return new Date(Date.now() + 6 * 3600000).toISOString();
@@ -9,48 +9,38 @@ function deadlineISO(when) {
   return d.toISOString();
 }
 
-// POST /api/chat  { text, zip, planId }
-// Returns { reply, parsed, results } — results null when it's just chat.
+// POST /api/chat  { text, zip, planId, history }
+// The agent (Kiro LLM) writes the reply in its own words. When it detects a
+// medication, we run the real search and attach pharmacy cards under the reply.
 export async function POST(req) {
-  const { text, zip, planId } = await req.json();
+  const { text, zip, planId, history } = await req.json();
   if (!text) return Response.json({ error: "text required" }, { status: 400 });
 
-  const parsed = await parseMessage(text);
+  // Let the Kiro agent converse. Fall back to rules only if the LLM errors.
+  let a = await agentRespond(text, history);
+  if (!a || !a.reply) a = ruleRespond(text);
 
-  if (parsed.intent === "chat" || !parsed.drug) {
-    return Response.json({
-      parsed,
-      results: null,
-      reply:
-        "I can find a pharmacy that delivers your medication home. " +
-        "Just tell me what you need — like \"I need amoxicillin by tonight\" or " +
-        "\"my mom's insulin, as soon as possible\"."
-    });
+  // Not a medication search → return the agent's own words, no cards.
+  if (a.intent !== "search" || !a.drug) {
+    return Response.json({ parsed: a, results: null, reply: a.reply });
   }
 
   const results = search({
     zip: zip || "01301",
-    medication: parsed.drug,
-    neededBy: deadlineISO(parsed.when),
-    rush: parsed.rush,
+    medication: a.drug,
+    neededBy: deadlineISO(a.when),
+    rush: a.rush,
     planId: planId || null,
-    sort: parsed.rush ? "fastest" : "best"
+    sort: a.rush ? "fastest" : "best"
   });
 
-  // Build a short human reply line
-  const total = results.rushResults.length + results.meetsDeadline.length;
-  let reply;
+  // Prefer the agent's natural lead-in; add a note if we had to widen the search.
+  let reply = a.reply;
   if (results.fallback?.reason === "nearby") {
-    reply = `Nothing delivers right to ${results.zip}, but pharmacies in ${results.fallback.town} (${results.fallback.miles} mi away) do. Here's what can reach you:`;
+    reply = `Nothing delivers right to ${results.zip}, but pharmacies in ${results.fallback.town} (about ${results.fallback.miles} mi away) can reach you. Here's what I found:`;
   } else if (results.fallback?.reason === "mail_only") {
     reply = `No local delivery to ${results.zip} yet — but mail-order can still get it to you:`;
-  } else if (results.rushResults.length) {
-    reply = `You need this fast. Here are the quickest options for ${results.drug}:`;
-  } else if (total) {
-    reply = `Here's who can deliver ${results.drug} to ${results.zip}:`;
-  } else {
-    reply = `These can't quite hit your deadline, but they're your closest options for ${results.drug}:`;
   }
 
-  return Response.json({ parsed, results, reply });
+  return Response.json({ parsed: a, results, reply });
 }
