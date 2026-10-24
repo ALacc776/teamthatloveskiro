@@ -1,0 +1,177 @@
+:root {
+  /* iOS system colors (light) */
+  --bg: #ffffff;
+  --grouped-bg: #f2f2f7;      /* iOS grouped background */
+  --ink: #000000;
+  --secondary: #3c3c4399;     /* iOS secondary label */
+  --tertiary: #3c3c434d;
+  --separator: #c6c6c8;
+  --blue: #007aff;            /* iOS system blue — the only accent */
+  --blue-ink: #ffffff;
+  --red: #ff3b30;             /* iOS system red — status only */
+  --green-status: #34c759;    /* status only, not a theme color */
+  --agent-bubble: #e9e9eb;    /* iMessage gray */
+  --agent-ink: #000000;
+  --user-bubble: #007aff;     /* iMessage blue */
+  --user-ink: #ffffff;
+  --field: #ffffff;
+  --card: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #000000;
+    --grouped-bg: #1c1c1e;
+    --ink: #ffffff;
+    --secondary: #ebebf599;
+    --tertiary: #ebebf54d;
+    --separator: #38383a;
+    --blue: #0a84ff;
+    --blue-ink: #ffffff;
+    --red: #ff453a;
+    --green-status: #30d158;
+    --agent-bubble: #26262a;
+    --agent-ink: #ffffff;
+    --user-bubble: #0a84ff;
+    --user-ink: #ffffff;
+    --field: #1c1c1e;
+    --card: #1c1c1e;
+  }
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body {
+  margin: 0; padding: 0; height: 100%;
+  background: var(--bg); color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased; letter-spacing: -0.01em;
+}
+
+/* ---------- App shell ---------- */
+.app {
+  max-width: 480px; margin: 0 auto; height: 100dvh;
+  display: flex; flex-direction: column; background: var(--bg);
+}
+
+/* ---------- Chat header (iOS nav bar) ---------- */
+.chat-head {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 10px 16px 10px; border-bottom: 0.5px solid var(--separator);
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+}
+.chat-head .mark {
+  width: 46px; height: 46px; border-radius: 50%;
+  background: var(--agent-bubble); color: var(--ink);
+  display: grid; place-items: center; font-weight: 600; font-size: 17px;
+}
+.chat-head .name { font-weight: 600; font-size: 15px; }
+.chat-head .status { font-size: 12px; color: var(--secondary); }
+
+/* ---------- Thread ---------- */
+.thread {
+  flex: 1; overflow-y: auto; padding: 14px 12px 6px;
+  display: flex; flex-direction: column; gap: 3px;
+  background: var(--bg);
+}
+.bubble {
+  max-width: 76%; padding: 9px 14px; border-radius: 19px;
+  font-size: 16px; line-height: 1.33; white-space: pre-wrap; word-wrap: break-word;
+  margin-top: 7px;
+}
+.bubble.agent { align-self: flex-start; background: var(--agent-bubble); color: var(--agent-ink); border-bottom-left-radius: 5px; }
+.bubble.user  { align-self: flex-end; background: var(--user-bubble); color: var(--user-ink); border-bottom-right-radius: 5px; }
+
+.typing { display: flex; gap: 4px; padding: 5px 2px; }
+.typing span { width: 8px; height: 8px; border-radius: 50%; background: var(--secondary); animation: blink 1.2s infinite both; }
+.typing span:nth-child(2) { animation-delay: .2s; }
+.typing span:nth-child(3) { animation-delay: .4s; }
+@keyframes blink { 0%,80%,100% { opacity: .25 } 40% { opacity: 1 } }
+@media (prefers-reduced-motion: reduce) { .typing span { animation: none; opacity: .5 } }
+
+/* ---------- Pharmacy result card ---------- */
+.pharm {
+  align-self: flex-start; max-width: 86%; margin-top: 7px;
+  background: var(--card); border: 0.5px solid var(--separator);
+  border-radius: 18px; border-bottom-left-radius: 5px; padding: 14px;
+}
+.pharm.rush { border-color: var(--red); }
+.pharm .pname { font-weight: 600; font-size: 16px; margin: 0 0 2px; }
+.pharm .eta { font-size: 15px; font-weight: 600; margin: 2px 0 9px; color: var(--ink); }
+.pharm.rush .eta { color: var(--red); }
+.pharm .facts { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.tag {
+  font-size: 13px; padding: 3px 10px; border-radius: 999px;
+  background: var(--grouped-bg); color: var(--ink);
+}
+.tag.free { color: var(--green-status); }
+.tag.rush { color: var(--red); font-weight: 600; }
+.tag.in  { color: var(--green-status); }
+.tag.out { color: var(--red); }
+.tag.meets { color: var(--green-status); }
+.pharm .conf { font-size: 12px; color: var(--secondary); margin-bottom: 11px; }
+.pharm .acts { display: flex; gap: 8px; }
+.pharm .acts a {
+  flex: 1; text-align: center; text-decoration: none; font-size: 15px; font-weight: 600;
+  padding: 10px; border-radius: 12px;
+}
+.pharm .acts .order { background: var(--blue); color: var(--blue-ink); }
+.pharm .acts .call { background: var(--grouped-bg); color: var(--blue); }
+
+/* ---------- Safety note ---------- */
+.safety {
+  align-self: center; text-align: center; font-size: 12.5px; color: var(--secondary);
+  padding: 6px 12px; max-width: 90%; margin-top: 6px;
+}
+.safety.flag { color: var(--red); }
+
+/* ---------- Quick suggestion chips ---------- */
+.chips { display: flex; gap: 8px; flex-wrap: wrap; padding: 6px 12px 2px; }
+.chips button {
+  background: var(--grouped-bg); border: none; color: var(--blue);
+  border-radius: 999px; padding: 9px 14px; font-size: 14px; cursor: pointer;
+}
+
+/* ---------- Composer (iMessage bar) ---------- */
+.composer {
+  display: flex; align-items: center; gap: 9px;
+  padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+  border-top: 0.5px solid var(--separator); background: var(--bg);
+}
+.composer .plus {
+  width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
+  border: none; background: var(--grouped-bg); color: var(--secondary);
+  font-size: 22px; line-height: 1; cursor: pointer;
+}
+.composer input {
+  flex: 1; border: 0.5px solid var(--separator); border-radius: 18px;
+  padding: 9px 15px; font-size: 16px; background: var(--field); color: var(--ink);
+}
+.composer input:focus { outline: none; border-color: var(--blue); }
+.composer .send {
+  width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0; border: none;
+  background: var(--blue); color: var(--blue-ink); font-size: 18px; cursor: pointer;
+}
+.composer .send:disabled { background: var(--tertiary); color: var(--secondary); }
+
+/* ---------- Onboarding ---------- */
+.onboard {
+  max-width: 480px; margin: 0 auto; min-height: 100dvh;
+  display: flex; flex-direction: column; justify-content: center;
+  padding: 28px 22px calc(28px + env(safe-area-inset-bottom)); background: var(--bg);
+}
+.onboard .hero { font-size: 32px; font-weight: 700; line-height: 1.1; margin: 0 0 10px; letter-spacing: -0.03em; }
+.onboard .sub { color: var(--secondary); font-size: 16px; margin: 0 0 26px; line-height: 1.4; }
+.onboard label { display: block; font-size: 13px; color: var(--secondary); margin: 18px 0 7px; padding-left: 4px; }
+.onboard input, .onboard select {
+  width: 100%; font-size: 17px; padding: 14px; border-radius: 12px;
+  border: none; background: var(--grouped-bg); color: var(--ink);
+}
+.onboard input:focus, .onboard select:focus { outline: 2px solid var(--blue); }
+.onboard .go {
+  width: 100%; margin-top: 26px; background: var(--blue); color: var(--blue-ink);
+  border: none; border-radius: 14px; padding: 16px; font-size: 17px; font-weight: 600; cursor: pointer;
+}
+.onboard .go:disabled { background: var(--tertiary); color: var(--secondary); }
+.onboard .fineprint { text-align: center; color: var(--secondary); font-size: 12.5px; margin-top: 16px; line-height: 1.5; }
