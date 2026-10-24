@@ -1,13 +1,29 @@
 # Oasis
 
-Oasis helps people find pharmacies that deliver prescription medication.
+## The problem
 
-Users enter their ZIP code, insurance, medication, strength and dosage form.
-Oasis searches Greater Boston pharmacy records and returns the three best options.
-Each result includes distance, delivery cost, the pharmacy website and a stock-check action.
+More than half a million Massachusetts residents live in a pharmacy desert.
+Getting prescription medication consistently and on time is difficult when the
+nearest pharmacy is far away or cannot fill a prescription before its refill date.
 
-Oasis works through its mobile web chat and an inbound SMS webhook. No account is
-required, and the search does not ask for a patient's name.
+Across Massachusetts, 15.8% of residents — more than one million people — live in
+a pharmacy desert or near-desert. [Massachusetts Health Policy Commission](https://masshpc.gov/news/press-release/over-half-million-massachusetts-residents-live-pharmacy-desert)
+
+## The solution
+
+Oasis is an SMS-based medication access assistant. It searches, ranks and
+coordinates pharmacy options for the user.
+
+Instead of downloading an app, creating an account, or calling pharmacies one by
+one, the user texts Oasis. They send their ZIP code, medication, strength and
+dosage form without sharing their name or creating a profile.
+
+Oasis checks its researched Greater Boston pharmacy directory, ranks pharmacies
+by ZIP match, distance and home-delivery support, then returns the three best
+options. Each result includes the pharmacy, distance, delivery cost and phone
+number.
+
+The same Oasis flow also runs in a mobile web chat.
 
 ## Run Oasis
 
