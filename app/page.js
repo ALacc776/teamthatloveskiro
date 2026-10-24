@@ -96,6 +96,7 @@ export default function Home() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
+  const [pending, setPending] = useState(null); // medication confirmation in progress
   const threadRef = useRef(null);
 
   // Load saved profile; if present, skip onboarding.
@@ -170,9 +171,10 @@ export default function Home() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, zip: profile.zip, planId: profile.planId, history })
+        body: JSON.stringify({ text, zip: profile.zip, planId: profile.planId, history, pending })
       });
       const data = await res.json();
+      setPending(data.pending ?? null);
       const msg = { from: "agent", text: data.reply };
       if (data.results) {
         const r = data.results;

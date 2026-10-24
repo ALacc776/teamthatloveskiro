@@ -18,6 +18,7 @@ export async function POST(req) {
   const message =
     `RxReach — delivery options for ${r.usedZip}:\n` +
     lines.join("\n") +
+    `\nCall to confirm the pharmacy has your exact medication in stock.` +
     `\nReply HELP for help. Not for emergencies, call 911.`;
 
   const sid = process.env.TWILIO_ACCOUNT_SID;
