@@ -5,13 +5,14 @@ import { PLANS } from "@/data/plans.js";
 
 export default function Onboarding({ onDone }) {
   const [name, setName] = useState("");
+  const [address, setAddress] = useState("");
   const [zip, setZip] = useState("");
   const [planId, setPlanId] = useState("");
 
   const valid = /^\d{5}$/.test(zip) && planId;
 
   function finish() {
-    const profile = { name: name.trim(), zip, planId };
+    const profile = { name: name.trim(), address: address.trim(), zip, planId };
     localStorage.setItem("rxreach_profile", JSON.stringify(profile));
     onDone(profile);
   }
@@ -22,14 +23,22 @@ export default function Onboarding({ onDone }) {
         Hi, I'm <span className="rx">RxReach</span>.
       </h1>
       <p className="sub">
-        Tell me where you are and I'll find a pharmacy that delivers your
+        Tell me where to deliver and I'll find a pharmacy that brings your
         medication to your door. Takes one minute.
       </p>
 
       <label>What should I call you? (optional)</label>
       <input value={name} onChange={(e) => setName(e.target.value)} placeholder="First name" />
 
-      <label>Your ZIP code</label>
+      <label>Delivery address</label>
+      <input
+        value={address}
+        onChange={(e) => setAddress(e.target.value)}
+        placeholder="e.g. 14 Main St, Greenfield"
+        autoComplete="street-address"
+      />
+
+      <label>ZIP code</label>
       <input
         value={zip}
         onChange={(e) => setZip(e.target.value.replace(/\D/g, "").slice(0, 5))}
