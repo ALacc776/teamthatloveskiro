@@ -1,5 +1,10 @@
 node_modules/
 .next/
-.env*.local
+
+# Environment / secrets — never commit real keys
+.env
+.env.*
+!.env.example
+
 .DS_Store
 npm-debug.log*
