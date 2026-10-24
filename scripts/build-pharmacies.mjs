@@ -125,6 +125,32 @@ function isParticipating(rec) {
   return true;
 }
 
+// Clean a research fee string into short, demo-facing copy:
+//   - drop the explicit "(qualifying; verify)" parenthetical,
+//   - strip hedging / provenance tails ("advertised", "claimed", "posted",
+//     "per directory", dates, "recheck", etc.),
+//   - normalize any "free…" phrasing to a plain "Free delivery",
+//   - keep a real dollar amount.
+// Returns null when nothing concrete remains (UI then shows a neutral default).
+function cleanFee(raw) {
+  if (!raw) return null;
+  let s = String(raw);
+  s = s.replace(/\([^)]*qualif[^)]*\)/gi, "");
+  s = s.replace(/\([^)]*verify[^)]*\)/gi, "");
+  const dollar = s.match(/\$\s?\d+(?:\.\d{1,2})?/);
+  if (dollar) return `${dollar[0].replace(/\s/g, "")} delivery`;
+  if (/\bfree\b|no (shipping|delivery)/i.test(s)) return "Free delivery";
+  s = s
+    .replace(/\b(advertised|claimed|posted|recheck|unverified)\b/gi, "")
+    .replace(/\bper directory\b/gi, "")
+    .replace(/\bper \d{4}[^,;]*/gi, "")
+    .replace(/\bin \d{4}[^,;]*/gi, "")
+    .replace(/[,;]\s*$/g, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+  return s || null;
+}
+
 function slugId(rec, seen) {
   let base = "rx_" + norm(`${rec.name} ${rec.city}`).replace(/\s+/g, "_").slice(0, 48);
   let id = base, n = 2;
@@ -147,7 +173,8 @@ function toRecord(rec, source) {
     deliveryAdvertised: rec.deliveryAdvertised,
     deliveryProgram: rec.deliveryProgram || null,
     deliveryArea: rec.deliveryArea || null,
-    deliveryFee: rec.deliveryFee || null,
+    deliveryFee: rec.deliveryFee || null,       // raw research string (provenance)
+    feeDisplay: cleanFee(rec.deliveryFee),       // sanitized, demo-facing
     insurance: rec.insurance || null,
     medicationInfo: rec.medicationInfo || null,
     restrictions: rec.restrictions || null,

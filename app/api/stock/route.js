@@ -12,7 +12,7 @@ import { putCall, linkVapiId } from "@/lib/callStore.js";
 //   RXREACH_CALLBACK      the callback number the agent reads aloud
 //   PUBLIC_BASE_URL       public https base (ngrok) for the webhook
 
-const APP_NAME = "RxReach";
+const APP_NAME = "Oasis";
 
 export async function POST(req) {
   const { pharmacyName, phone, medication } = await req.json();

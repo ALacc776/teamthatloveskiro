@@ -1,7 +1,7 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "RxReach — Pharmacy delivery for Western MA",
+  title: "Oasis — Pharmacy delivery for Western MA",
   description: "Find a pharmacy that can deliver your medication to your door."
 };
 

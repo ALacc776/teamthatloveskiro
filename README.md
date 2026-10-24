@@ -1,16 +1,18 @@
-# RxReach
+# Oasis
 
-Find a pharmacy that can **deliver your medication to your door** — built for
-pharmacy deserts in Franklin County, Western Massachusetts.
+Find a pharmacy that can **deliver your medication to your door** — built to help
+people in pharmacy deserts reach a delivering pharmacy without a car.
 
-Enter a ZIP code, medication, and when you need it. RxReach returns a ranked
-list of delivering pharmacies with an honest **delivery-time window**, a delivery
-fee, an order cutoff, and a one-tap "text me these results" for anyone without a
-smartphone (think a grandparent in Shelburne Falls on a flip phone).
+Tell Oasis your ZIP, your medication, and your insurance. It returns a ranked
+short list of nearby pharmacies with **documented** home delivery, how far each
+one is, and the delivery fee on record — then lets you place a demo order and
+sets a refill check-in so you don't run out.
 
-> Hackathon MVP. Pharmacy names/locations are real Western MA pharmacies; fees,
-> cutoffs, windows and fill times are **hand-curated demo data**. Building and
-> verifying that directory for real is the actual product.
+> Hackathon MVP. Pharmacy records are **real research data** for Greater Boston
+> (names, addresses, phone numbers, sources and verification notes are preserved
+> verbatim). A listed pharmacy is **not** proof of stock or of your eligibility —
+> every record still needs a phone call to confirm. There are no invented
+> delivery-time estimates.
 
 ## Run it
 
@@ -24,54 +26,62 @@ npm run dev
 Open it on your phone (same Wi-Fi) at `http://<your-computer-ip>:3000` — it's a
 mobile-first website, so it looks and feels like an app with no install.
 
-## Demo script (2 min)
+## How it ranks pharmacies
 
-1. "In rural Massachusetts, the nearest pharmacy can be a 40-minute drive. Many
-   pharmacies deliver — but no one tells you which, by when, or for how much."
-2. Type ZIP `01301`, drug `Amoxicillin`, needed by `Today`. Hit search.
-3. Point at a result: "**A window, not a fake number**, with a confidence label.
-   It tells you to order by the cutoff to make today."
-4. Switch Sort to **Cheapest** — ranking reorders, and "Why here" explains it.
-5. Try `Insulin (Lantus)` — note the cold-chain safety banner.
-6. Enter your own phone, tap **Text me these results** — read the SMS aloud.
-   That line is the whole point: it reaches people with no smartphone.
+No delivery-time guessing. Oasis ranks the top 5 by, in order:
 
-## How delivery time is estimated
+1. **ZIP relevance** — your exact ZIP first, then the same ZIP area, then nearby.
+2. **Documented delivery** — pharmacies with delivery documented on a provider
+   page rank above stores only covered by a chain's general policy.
+3. **Distance** — closer ranks higher (approximate straight-line miles from ZIP
+   centroids; the research data carries no coordinates, so distance is shown as
+   "~N mi").
+4. **Source freshness** — more recently reviewed records break remaining ties.
 
-No one publishes real delivery times, so we compute a window:
+See `lib/engine.js`. The pharmacy dataset is generated from the research CSVs:
 
-```
-delivery_time = fill_time + batch_wait + drive_time
+```bash
+npm run build:pharmacies   # data/research/*.csv -> data/pharmacies.generated.js
 ```
 
-- **fill_time** — per-pharmacy prior + extra minutes for some drugs.
-- **batch_wait** — pharmacies deliver in set windows; miss the cutoff → next day.
-- **drive_time** — straight-line miles between ZIP centroids ÷ 30 mph (rural),
-  no Maps API needed.
+## Data
 
-A result "meets your deadline" only if the **late** end of the window beats it.
-Between the early and late end it shows as "tight". See `lib/engine.js`.
+- `data/research/RxReach_Greater_Boston_Pharmacies_FIXED.csv` — 146 pharmacies (primary).
+- `data/research/RxReach_Delivery_Programs_EXPANDED.csv` — 58 delivery-program
+  records, merged into the primary set by name + address (no duplicates created).
+- `data/pharmacies.generated.js` — the built dataset (do not hand-edit).
+- `data/catalog.generated.js` — the broad medication-name index (separate build).
 
-## Who built what (team of 3)
+## Medication confirmation
 
-| Person | Owns | Files |
-| --- | --- | --- |
-| A — Frontend | Screens, mobile look | `app/page.js`, `app/globals.css` |
-| B — Backend + data | ETA + ranking, directory | `lib/engine.js`, `data/*.js`, `app/api/search` |
-| C — SMS + pitch | Text-me, demo | `app/api/text/route.js`, this README |
+Before searching, Oasis confirms the exact medication, strength and dosage form,
+and never substitutes one for another (`lib/confirmation.js`). A medication you've
+ordered before can be **reordered in one tap**, skipping those questions.
 
-The one contract between them is the `/api/search` JSON shape.
+## Refill check-in
 
-## Real SMS (optional)
+After an order, Oasis remembers it and schedules a check-in ~14 days later
+("time to reorder?"). This demo stores it in the browser and surfaces the reminder
+the next time you open Oasis. A production build would run this server-side and
+send it by SMS.
 
-The text route runs in **demo mode** (shows the message, sends nothing) until you
-set Twilio env vars:
+## SMS (optional)
+
+The text route (`/api/text`) runs in **demo mode** (shows the message, sends
+nothing) until you set keys in `.env.local`. It supports two backends:
+
+- **Textbelt** (`TEXTBELT_KEY`) — cheap, pay-as-you-go, no phone number to buy.
+- **Twilio** (`TWILIO_ACCOUNT_SID` + `TWILIO_AUTH_TOKEN` + `TWILIO_FROM`).
 
 ```bash
 cp .env.example .env.local   # then fill in real values
 ```
 
+Oasis never assumes a pharmacy phone supports SMS — pharmacy numbers are only
+shown for you to **call**, and only verified participating pharmacies are listed
+in an outbound text.
+
 ## Not in the MVP (on purpose)
 
-Insurance matching, ML ETA model, pharmacy portal, accounts, two-way SMS parsing.
-These are Phase 2 — see the full design spec.
+Real insurance network matching, live stock, pharmacy accounts, two-way SMS
+parsing. These are Phase 2.

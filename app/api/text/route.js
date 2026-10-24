@@ -27,7 +27,7 @@ export async function POST(req) {
 function buildMessage(r, top) {
   if (top.length === 0) {
     return (
-      `RxReach — for ${r.usedZip}, I couldn't confirm a participating delivery ` +
+      `Oasis — for ${r.usedZip}, I couldn't confirm a participating delivery ` +
       `pharmacy from verified records. Please call a local pharmacy to ask about delivery.` +
       `\nReply HELP for help. Not for emergencies, call 911.`
     );
@@ -38,7 +38,7 @@ function buildMessage(r, top) {
     return `${i + 1}) ${x.name}, ${x.address}${fee}. Call ${x.phone} to confirm delivery + stock.`;
   });
   return (
-    `RxReach — documented delivery pharmacies near ${r.usedZip}:\n` +
+    `Oasis — documented delivery pharmacies near ${r.usedZip}:\n` +
     lines.join("\n") +
     `\nCall each pharmacy to confirm they deliver to you and have your exact medication in stock.` +
     `\nReply HELP for help. Not for emergencies, call 911.`

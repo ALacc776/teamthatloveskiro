@@ -98,6 +98,7 @@ html, body {
 }
 .pharm.rush { border-color: var(--red); }
 .pharm .pname { font-weight: 600; font-size: 16px; margin: 0 0 2px; }
+.pharm .paddr { font-size: 13px; color: var(--secondary); margin: 0 0 6px; }
 .pharm .eta { font-size: 15px; font-weight: 600; margin: 2px 0 9px; color: var(--ink); }
 .pharm.rush .eta { color: var(--red); }
 .pharm .facts { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
@@ -106,6 +107,7 @@ html, body {
   background: var(--grouped-bg); color: var(--ink);
 }
 .tag.free { color: var(--green-status); }
+.tag.dist { color: var(--blue); font-weight: 600; }
 .tag.rush { color: var(--red); font-weight: 600; }
 .tag.in  { color: var(--green-status); }
 .tag.out { color: var(--red); }
@@ -117,6 +119,7 @@ html, body {
   padding: 10px; border-radius: 12px; border: none; cursor: pointer; font-family: inherit;
 }
 .pharm .acts .order { background: var(--blue); color: var(--blue-ink); }
+.pharm .acts .order.disabled { background: var(--grouped-bg); color: var(--secondary); cursor: default; }
 .pharm .acts .call { background: var(--grouped-bg); color: var(--blue); }
 .pharm .acts .call:disabled { opacity: .6; }
 

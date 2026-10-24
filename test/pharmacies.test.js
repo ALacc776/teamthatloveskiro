@@ -157,3 +157,47 @@ test("findDrug still recognizes the demo drugs and safety flags flow", () => {
   const r = search({ zip: "02115", medication: "EpiPen" });
   assert.ok(r.flags.includes("time_critical"));
 });
+
+// ---- Fees are cleaned for the demo (no hedging, no 'qualifying; verify') ----
+test("fee display strips '(qualifying; verify)' and hedging words", () => {
+  for (const p of PHARMACIES) {
+    if (p.feeDisplay) {
+      assert.ok(!/qualif|verify|advertised|claimed|posted|recheck|unverified/i.test(p.feeDisplay),
+        `feeDisplay should be clean: ${p.feeDisplay}`);
+    }
+  }
+  // The CVS chain-policy fee is reduced to a plain amount.
+  const cvs = PHARMACIES.find((p) => (p.deliveryFee || "").includes("qualifying"));
+  assert.ok(cvs);
+  assert.equal(cvs.feeDisplay, "$5.49 delivery");
+});
+
+// ---- Distance is surfaced (approximate, from ZIP centroids) ----
+test("search attaches an approximate distance for known ZIPs", () => {
+  const r = search({ zip: "02215", medication: "amoxicillin" });
+  const same = r.candidates.find((c) => c.zip === "02215");
+  assert.ok(same);
+  assert.equal(same.distanceMiles, 0);
+  assert.equal(same.distanceLabel, "In your ZIP");
+  // A candidate in a different ZIP has a positive approximate distance.
+  const other = r.candidates.find((c) => c.zip && c.zip !== "02215");
+  if (other) assert.ok(other.distanceMiles === null || other.distanceMiles > 0);
+});
+
+test("closer pharmacies are not out-ranked by farther ones at equal evidence", () => {
+  const r = search({ zip: "02215", medication: "metformin" });
+  // Within the participating, same-area group, distances should be non-decreasing
+  // enough that the nearest participating pharmacy is at or near the top.
+  const participating = r.candidates.filter((c) => c.participating && c.distanceMiles != null);
+  if (participating.length >= 2) {
+    assert.ok(participating[0].distanceMiles <= participating[participating.length - 1].distanceMiles + 5);
+  }
+});
+
+// ---- No hedging confidence word leaks to the card ----
+test("results do not carry a hedging confidence label", () => {
+  const r = search({ zip: "02115", medication: "amoxicillin" });
+  for (const c of r.candidates) {
+    assert.equal(c.confidence, null);
+  }
+});

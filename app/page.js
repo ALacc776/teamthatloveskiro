@@ -85,58 +85,23 @@ function matchPlan(text) {
   return null;
 }
 
-// Turn the pharmacy's DOCUMENTED delivery text into a human "coming by…" phrase.
-// The research data has no real ETAs, so this is a clearly-labeled DEMO estimate,
-// never presented as a guaranteed time — the copy always says "once confirmed".
-function etaPhrase(r) {
-  const hay = `${r.deliveryFee || ""} ${r.deliveryProgram || ""} ${r.deliveryArea || ""} ${r.etaLabel || ""}`.toLowerCase();
-  if (/same[-\s]?day|courier|rush|within hours/.test(hay)) return "in about 2–4 hours";
-  if (/next[-\s]?day|tomorrow/.test(hay)) return "by tomorrow";
-  if (/mail|ship/.test(hay)) return "in about 2–3 days by mail";
-  return "in about 1–2 days"; // honest default when nothing is documented
-}
-
 function PharmBubble({ r, profile, onOrdered }) {
   const [stock, setStock] = useState(null);
-  const [order, setOrder] = useState(null); // {stage:"placing"|"done", pct, eta}
   const ins =
-    r.insurance === "likely_in" ? ["in", "Likely in network"]
-    : r.insurance === "likely_out" ? ["out", "May be out of network"]
+    r.insurance === "likely_in" ? ["in", "In network"]
     : r.insurance === "cash" ? ["", "Cash price"]
-    : null;
+    : null;  // uncertain / out-of-network: show nothing rather than a hedge
 
-  // Simulate placing the order: a short staged progress, then a confirmation
-  // with the estimated delivery time. Nothing is actually ordered — this is the
-  // demo flow the real pharmacy integration would replace.
-  function startOrder() {
-    if (order?.stage === "placing") return;
-    const eta = etaPhrase(r);
-    const steps = [
-      { pct: 22, label: "Ordering now…" },
-      { pct: 52, label: "Sending your prescription to the pharmacy…" },
-      { pct: 80, label: "Confirming delivery to your address…" },
-      { pct: 100, label: "Order placed" }
-    ];
-    let i = 0;
-    setOrder({ stage: "placing", pct: steps[0].pct, label: steps[0].label, eta });
-    const timer = setInterval(() => {
-      i += 1;
-      if (i < steps.length) {
-        setOrder({ stage: "placing", pct: steps[i].pct, label: steps[i].label, eta });
-      } else {
-        clearInterval(timer);
-        setOrder({ stage: "done", pct: 100, eta });
-        // Remember this order so we can reorder it later and check in on a cadence.
-        onOrdered?.({
-          name: r.drugName || "your prescription",
-          strength: r.strength || null,
-          form: r.form || null,
-          pharmacyName: r.name,
-          pharmacyId: r.pharmacyId,
-          eta
-        });
-      }
-    }, 900);
+  // Opening the pharmacy website is how an order actually starts. We still record
+  // the med so the refill check-in has something to remember.
+  function openOrderSite() {
+    onOrdered?.({
+      name: r.drugName || "your prescription",
+      strength: r.strength || null,
+      form: r.form || null,
+      pharmacyName: r.name,
+      pharmacyId: r.pharmacyId
+    });
   }
 
   async function checkStock() {
@@ -159,20 +124,16 @@ function PharmBubble({ r, profile, onOrdered }) {
     }, 1500);
   }
 
-  const drug = r.drugName || "your prescription";
-
   return (
-    <div className={`pharm ${r.mode === "rush" ? "rush" : ""}`}>
+    <div className="pharm">
       <p className="pname">{r.name}</p>
-      <p className="eta">{r.etaLabel}</p>
+      <p className="paddr">{[r.street, r.city].filter(Boolean).join(", ")}</p>
+      <p className="eta">{r.deliveryLabel || r.etaLabel}</p>
       <div className="facts">
-        {r.mode === "rush" && <span className="tag rush">Fast delivery</span>}
-        <span className={`tag ${r.fee === 0 ? "free" : ""}`}>{r.feeLabel}</span>
+        {r.distanceLabel && <span className="tag dist">{r.distanceLabel}</span>}
+        <span className="tag">{r.feeLabel}</span>
         {ins && <span className={`tag ${ins[0]}`}>{ins[1]}</span>}
-        {r.deadlineStatus === "meets" && <span className="tag free">Meets your time</span>}
-        {r.deadlineStatus === "tight" && <span className="tag">Tight</span>}
       </div>
-      <p className="conf">Order by {r.cutoff} · {r.confidence} confidence · verified {r.lastVerified}</p>
       {stock && (
         <div className={`stock ${stock.status === "done" ? (stock.inStock ? "in" : "out") : stock.status}`}>
           {stock.status === "calling" && <><span className="dot" /> Calling {r.name} to check stock…</>}
@@ -182,25 +143,14 @@ function PharmBubble({ r, profile, onOrdered }) {
           {stock.status === "error" && <>Couldn't place the call.</>}
         </div>
       )}
-      {order && (
-        <div className={`order-status ${order.stage}`} role="status" aria-live="polite">
-          {order.stage === "placing" ? (
-            <>
-              <div className="order-row"><span className="dot" /> {order.label}</div>
-              <div className="bar" aria-hidden="true"><span style={{ width: `${order.pct}%` }} /></div>
-            </>
-          ) : (
-            <>
-              <div className="order-row done">✅ Order placed — {drug} coming to you {order.eta}.</div>
-              <div className="order-note">Estimated; {r.name} will confirm the exact time. We'll text {profile?.phone ? profile.phone : "you"} an update.</div>
-            </>
-          )}
-        </div>
-      )}
       <div className="acts">
-        <button className="order" type="button" onClick={startOrder} disabled={order?.stage === "placing"}>
-          {order?.stage === "placing" ? "Ordering…" : order?.stage === "done" ? "Ordered ✓" : "Start order"}
-        </button>
+        {r.orderUrl ? (
+          <a className="order" href={r.orderUrl} target="_blank" rel="noopener noreferrer" onClick={openOrderSite}>
+            Pharmacy website ↗
+          </a>
+        ) : (
+          <span className="order disabled">No website on file</span>
+        )}
         <button className="call" type="button" onClick={checkStock} disabled={stock?.status === "calling"}>
           {stock?.status === "calling" ? "Calling…" : "Check stock"}
         </button>
@@ -248,7 +198,7 @@ export default function Home() {
     } else {
       // Start the in-chat onboarding.
       setMessages([{ from: "agent", text:
-        "Hi, I'm RxReach. I find a pharmacy that delivers your prescription to your door. " +
+        "Hi, I'm Oasis. I find a pharmacy that delivers your prescription to your door. " +
         "First, what's your ZIP code?" }]);
     }
     setReady(true);
@@ -429,13 +379,13 @@ export default function Home() {
     : onboarding && step === "phone" ? "Your mobile number…"
     : onboarding && step === "insurance" ? "Your insurance plan…"
     : onboarding && step === "address" ? "Your delivery address…"
-    : "Message RxReach…";
+    : "Message Oasis…";
 
   return (
     <div className="app">
       <div className="chat-head">
         <div className="mark">Rx</div>
-        <div className="name">RxReach</div>
+        <div className="name">Oasis</div>
         <div className="status">{profile ? `Delivery near ${profile.zip}` : "Setting things up…"}</div>
       </div>
 
@@ -458,7 +408,8 @@ export default function Home() {
             {m.cards?.map((c) => (
               <PharmBubble key={c.pharmacyId} r={c} profile={profile} onOrdered={handleOrdered} />
             ))}
-            {m.cards?.length > 0 && (
+            {/* Text-me button hidden for now (SMS paused). Code kept for later. */}
+            {false && m.cards?.length > 0 && (
               <button className="textme" type="button" disabled={busy} onClick={() => textMe(m.cards[0].drugName)}>
                 📲 Text me these options
               </button>
@@ -478,7 +429,8 @@ export default function Home() {
         </div>
       )}
 
-      {!onboarding && meds.length > 0 && (
+      {/* Simulate check-in chip hidden for now. Code kept for later demos. */}
+      {false && !onboarding && meds.length > 0 && (
         <div className="chips demo">
           <button className="demo-btn" onClick={demoDueNow} title="Demo: skip the 14-day wait">
             ⏩ Simulate 14-day check-in
